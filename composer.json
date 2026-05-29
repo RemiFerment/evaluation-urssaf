@@ -2,7 +2,7 @@
     "name": "remi/evaluation-urssaf",
     "autoload": {
         "psr-4": {
-            "App\\": "src/"
+            "Urssaf\\": "src/"
         }
     },
     "require": {}

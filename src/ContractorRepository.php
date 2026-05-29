@@ -1,4 +1,8 @@
 <?php
+Namespace Urssaf;
+
+use Urssaf\Contractor;
+use Urssaf\Database;
 
 /**
  * Couche d'abstraction sur l'origine des données.
@@ -6,8 +10,10 @@
 class ContractorRepository
 {
     //Injection de dépendance dans le constructeur de l'instance PDO (accès a la base de données)
-    public function __construct(private PDO $pdo) {}
-
+    public function __construct(private Database $db)
+    {
+        $this->db = Database::getInstance();
+    }
 
     /**
      * Retourne l'identifiant généré par la base pour le nouveau record
@@ -16,7 +22,11 @@ class ContractorRepository
      */
     public function save(string $fullName, string $siret, string $activity, string $taxSystem): int
     {
-        //À implémenter...
+        try {
+            return $this->db->addSelfEmployed($fullName, $siret, $activity, $taxSystem);
+        } catch (\Exception $e) {
+            throw new \Exception("Erreur lors de l'ajout de l'auto-entreprise: " . $e->getMessage());
+        }
     }
 
     /**
@@ -24,7 +34,11 @@ class ContractorRepository
      */
     public function find(int $id): ?Contractor
     {
-        //À implémenter...
+        try {
+            return $this->db->getContractorById($id);
+        } catch (\Exception $e) {
+            throw new \Exception("Erreur lors de la recherche de l'auto-entreprise: " . $e->getMessage());
+        }
     }
 
     /**
@@ -32,6 +46,10 @@ class ContractorRepository
      */
     public function findAll(): array
     {
-        //À implémenter...
+        try {
+            return $this->db->getAllContractors();
+        } catch (\Exception $e) {
+            throw new \Exception("Erreur lors de la récupération des auto-entreprises: " . $e->getMessage());
+        }
     }
 }
