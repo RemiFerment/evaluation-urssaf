@@ -1,30 +1,42 @@
 <?php
 
 namespace Urssaf;
-/*
-Ici on choisit une classe abstraite pour centraliser l'implémentation de la génération du rapport, commune à tous les régimes. On fait un mélange entre le pattern *Strategy* et *Template Method*
-*/
 
 abstract class AbstractActivityStrategy
-{ //À implémenter...
-    //Retourne le rapport (qui sera affiché sur la sortie standard)
+{
     public function buildReport(float $caHt, string $taxSystem): string
     {
-        return "Rapport d'activité:\n" .
-            "Chiffre d'affaires HT: {$caHt} €\n" .
-            "Cotisations sociales: " . ($caHt * $this->cotisationRate()) . " €\n" .
-            "Indemnités de frais d'exploitation: " . $this->specificSubsidy($caHt) . " €\n" .
-            "Régime fiscal: {$taxSystem}\n" .
-            "Prélèvement fiscal: " . ($taxSystem === 'vfl' ? ($caHt * $this->taxDischargePayment()) : ($caHt * $this->abatementRate())) . " €\n";
-    }
-    //Retourne le taux de cotisation social
-    abstract protected function cotisationRate(): float;
-    //Retourne le taux de prélèvement dans le cadre du régime fiscal "Versement fiscal libératoire" (vfl)
-    abstract protected function taxDischargePayment(): float;
-    //Retourne le taux d'abattement fiscal dans le cadre du régime fiscal "Prélèvement à la source" (ps)
-    abstract protected function abatementRate(): float;
+        $cotisations = $caHt * $this->cotisationRate();
+        $aide = $this->specificSubsidy($caHt);
 
-    //De la logique métier propre à chaque régime d'activité
-    //Calcul des indemnités de frais d'exploitation
+        $output = "";
+
+        if ($taxSystem === 'ps') {
+            // Prélèvement à la source
+            $revenuImposable = $caHt * (1 - $this->abatementRate());
+            $caTtc = $caHt - $cotisations + $aide;
+
+            $output .= "CA HT mensuel:               " . number_format($caHt, 2, ',', ' ') . " EUROS\n";
+            $output .= "Aide spécifique:               " . number_format($aide, 2, ',', ' ') . " EUROS\n";
+            $output .= "Cotisations sociales:          " . number_format($cotisations, 2, ',', ' ') . " EUROS\n";
+            $output .= "Revenu imposable:              " . number_format($revenuImposable, 2, ',', ' ') . " EUROS\n";
+            $output .= "CA TTC mensuel:              " . number_format($caTtc, 2, ',', ' ') . " EUROS\n";
+        } else {
+            // Versement fiscal libératoire
+            $impot = $caHt * $this->taxDischargePayment();
+            $caTtc = $caHt - $cotisations - $impot + $aide;
+            $output .= "CA HT mensuel:                  " . number_format($caHt, 2, ',', ' ') . " EUROS\n";
+            $output .= "Aide spécifique:                    " . number_format($aide, 2, ',', ' ') . " EUROS\n";
+            $output .= "Cotisations sociales:             " . number_format($cotisations, 2, ',', ' ') . " EUROS\n";
+            $output .= "Montant de l'impôt à prélever:     " . number_format($impot, 2, ',', ' ') . " EUROS\n";
+            $output .= "CA TTC mensuel:                 " . number_format($caTtc, 2, ',', ' ') . " EUROS\n";
+        }
+
+        return $output;
+    }
+
+    abstract protected function cotisationRate(): float;
+    abstract protected function taxDischargePayment(): float;
+    abstract protected function abatementRate(): float;
     abstract protected function specificSubsidy(float $caHt): float;
 }

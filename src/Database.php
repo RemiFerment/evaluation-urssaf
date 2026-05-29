@@ -22,16 +22,21 @@ class Database
         return self::$instance;
     }
 
+    public function clear(): void
+    {
+        $this->pdo->exec("DELETE FROM contractor");
+        $this->pdo->exec("DELETE FROM sqlite_sequence WHERE name = 'contractor'");
+    }
     private function initializeDatabase()
     {
         $sql = <<< SQL
         CREATE TABLE IF NOT EXISTS contractor (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            full_name TEXT NOT NULL,
+            fullName TEXT NOT NULL,
             siret TEXT NOT NULL UNIQUE,
             activity TEXT NOT NULL,
-            tax_system TEXT NOT NULL,
-            created_at TEXT DEFAULT CURRENT_DATE
+            taxSystem TEXT NOT NULL,
+            createdAt TEXT DEFAULT CURRENT_DATE
         );
         SQL;
         $this->pdo->exec($sql);
@@ -40,21 +45,22 @@ class Database
     public function getAllContractors(): array
     {
         $stmt = $this->pdo->query("SELECT * FROM contractor");
-        return $stmt->fetchAll(\PDO::FETCH_CLASS, Contractor::class);
+        return $stmt->fetchAll(\PDO::FETCH_OBJ);
     }
 
     public function getContractorById(int $id): Contractor
     {
         $sql = <<< SQL
-        SELECT *
+        SELECT 
+            fullName, siret, activity, taxSystem
         FROM contractor
         WHERE id = :id
         SQL;
         $stmt = $this->pdo->prepare($sql);
         $stmt->bindParam(':id', $id, \PDO::PARAM_INT);
         $stmt->execute();
-        $result = $stmt->fetchObject(Contractor::class);
-        return $result ?? throw new \Exception("Contractor with ID $id not found.");
+        $result = $stmt->fetch(\PDO::FETCH_OBJ);
+        return $result ? new Contractor($result->fullName, $result->siret, $result->activity, $result->taxSystem) : throw new \Exception("Contractor with ID $id not found.");
     }
 
     private function checkSiretConfirmity(string $siret): void
@@ -75,18 +81,18 @@ class Database
         }
     }
 
-    public function addSelfEmployed(string $fullName, string $siret, string $activityRegime, string $taxRegime): int
+    public function addContractor(string $fullName, string $siret, string $activityRegime, string $taxRegime): int
     {
         $this->checkSiretConfirmity($siret);
         $sql = <<< SQL
-        INSERT INTO self_employed (full_name, siret, activity_regime, tax_regime)
-        VALUES (:full_name, :siret, :activity_regime, :tax_regime)
+        INSERT INTO contractor (fullName, siret, activity, taxSystem)
+        VALUES (:fullName, :siret, :activity, :taxSystem)
         SQL;
         $stmt = $this->pdo->prepare($sql);
-        $stmt->bindParam(':full_name', $fullName);
+        $stmt->bindParam(':fullName', $fullName);
         $stmt->bindParam(':siret', $siret);
-        $stmt->bindParam(':activity_regime', $activityRegime);
-        $stmt->bindParam(':tax_regime', $taxRegime);
+        $stmt->bindParam(':activity', $activityRegime);
+        $stmt->bindParam(':taxSystem', $taxRegime);
         $stmt->execute();
         return $this->pdo->lastInsertId();
     }
@@ -100,12 +106,12 @@ class Database
         // | Emily  | Brontë          | 33512369768412 | BIC               | Versement fiscal libératoire | 4050                  |
         // | Ellie  | Williams        | 11112245668417 | BNC               | Versement fiscal libératoire | 0                     |
         $sql = <<< SQL
-        INSERT INTO self_employed (full_name, siret, activity_regime, tax_regime)
+        INSERT INTO contractor (fullName, siret, activity, taxSystem)
         VALUES 
-        ('John Incubator Jones', '18812369758410', 'BIC(Vente)', 'Prélèvement à la source'),
-        ('Luigi Vercotti', '18823697384617', 'BNC', 'Versement fiscal libératoire'),
-        ('Emily Brontë', '33512369768412', 'BIC', 'Versement fiscal libératoire'),
-        ('Ellie Williams', '11112245668417', 'BNC', 'Versement fiscal libératoire')
+        ('John Incubator Jones', '18812369758410', 'bic-vente', 'ps'),
+        ('Luigi Vercotti', '18823697384617', 'bnc', 'vfl'),
+        ('Emily Brontë', '33512369768412', 'bic', 'vfl'),
+        ('Ellie Williams', '11112245668417', 'bnc', 'vfl')
         SQL;
         $stmt = $this->pdo->prepare($sql);
         return $stmt->execute();

@@ -1,5 +1,6 @@
 <?php
-Namespace Urssaf;
+
+namespace Urssaf;
 
 use Urssaf\Contractor;
 use Urssaf\Database;
@@ -23,7 +24,7 @@ class ContractorRepository
     public function save(string $fullName, string $siret, string $activity, string $taxSystem): int
     {
         try {
-            return $this->db->addSelfEmployed($fullName, $siret, $activity, $taxSystem);
+            return $this->db->addContractor($fullName, $siret, $activity, $taxSystem);
         } catch (\Exception $e) {
             throw new \Exception("Erreur lors de l'ajout de l'auto-entreprise: " . $e->getMessage());
         }
